@@ -4,9 +4,27 @@
 [![Catalog: CC BY-SA 4.0](https://img.shields.io/badge/Catalog-CC%20BY--SA%204.0-4338ca.svg)](data/ATTRIBUTION.md)
 [![CI](https://github.com/nimausername/German-Word-Trainer/actions/workflows/ci.yml/badge.svg)](https://github.com/nimausername/German-Word-Trainer/actions/workflows/ci.yml)
 
+This repository is **the web application only**. It does not include Keycloak, PostgreSQL, or any other infrastructure. You run those on your own servers and point the app at them with environment variables.
+
 Open-source spaced-repetition trainer for about **4000 high-frequency German words**. The app UI is English. Meanings, extra notes, and grammatical hints are **Persian (Farsi)**.
 
-Sign-in and sign-up are custom pages. Auth is backed by your own Keycloak realm (password grant + Admin API). There is no redirect to Keycloak's hosted login.
+Sign-in and sign-up are custom pages in this app. They talk to **your** Keycloak realm (password grant + Admin API). There is no redirect to Keycloak's hosted login.
+
+## What is in this repo
+
+| Included | Not included |
+| --- | --- |
+| Next.js app (UI, API, SM-2 study loop) | Keycloak / identity server |
+| Word catalog JSON and seed scripts | PostgreSQL server |
+| Drizzle schema and migrations (applied **to** your database) | Any hosted database |
+| `Dockerfile` for this app container | Compose stacks for Keycloak or Postgres |
+
+Bring your own:
+
+- **PostgreSQL** — study data (`words`, `user_cards`, `user_settings`)
+- **Keycloak** — accounts and tokens
+
+The [`Dockerfile`](Dockerfile) builds **only this Next.js app**. It does not start Keycloak or a database. At runtime the container reads `DATABASE_URL` and `KEYCLOAK_*` from the environment and connects to the servers you already operate.
 
 ## Features
 
@@ -22,20 +40,22 @@ Sign-in and sign-up are custom pages. Auth is backed by your own Keycloak realm 
 
 | Layer | Choice |
 | --- | --- |
-| App | Next.js 16 (App Router), React 19, TypeScript |
+| App (this repo) | Next.js 16 (App Router), React 19, TypeScript |
 | UI | Tailwind CSS 4, shadcn (Base UI), ReUI |
-| Auth | Auth.js credentials + Keycloak |
-| Data | PostgreSQL + Drizzle ORM |
+| Auth (external) | Your Keycloak realm, via Auth.js credentials |
+| Data (external) | Your PostgreSQL, via Drizzle ORM |
 | Scheduling | SM-2 |
 | Package manager | pnpm |
 
 ## Architecture
 
 ```text
-Browser  →  Next.js pages / server actions
-         →  /api/v1  (session cookie)
-         →  study-service  →  PostgreSQL (words, user_cards, user_settings)
-Auth     →  Auth.js  →  Keycloak password grant + Admin API
+Browser  →  this Next.js app (pages, server actions, /api/v1)
+         →  study-service
+         →  YOUR PostgreSQL  (words, user_cards, user_settings)
+
+Auth     →  Auth.js in this app
+         →  YOUR Keycloak     (password grant + Admin API)
 ```
 
 - `userId` is always the Keycloak subject (`sub`). Clients never choose it.
@@ -44,11 +64,15 @@ Auth     →  Auth.js  →  Keycloak password grant + Admin API
 
 ## Requirements
 
+To run the app you need:
+
 - Node.js 22+
 - pnpm 10+ (`packageManager` in `package.json` is `pnpm@12.4.2`)
-- PostgreSQL 16+ (Docker Compose is included)
-- A Keycloak realm with a confidential client
+- Network access to **your** PostgreSQL
+- Network access to **your** Keycloak realm (confidential client)
 - Python 3, only if you rebuild the word catalog
+
+This repo does not install or start those servers.
 
 ## Quick start
 
@@ -64,12 +88,11 @@ cp .env.example .env
 openssl rand -base64 32
 ```
 
-2. Fill Keycloak values in `.env` (see below). The example `DATABASE_URL` matches Compose.
+2. Point `.env` at **your** Keycloak and **your** Postgres (see [`.env.example`](.env.example)). Do not commit `.env`.
 
-3. Start Postgres, install, migrate, and seed:
+3. Install, apply the schema to your database, seed, and run the app:
 
 ```bash
-docker compose up -d postgres
 pnpm install
 pnpm db:push
 pnpm db:seed:full
@@ -89,8 +112,8 @@ Open [http://localhost:3000](http://localhost:3000).
 | `pnpm lint` | ESLint |
 | `pnpm typecheck` | TypeScript (`tsc --noEmit`) |
 | `pnpm test` | Vitest (SM-2, cards, catalog) |
-| `pnpm db:push` | Push Drizzle schema to Postgres |
-| `pnpm db:migrate` | Run SQL migrations |
+| `pnpm db:push` | Push Drizzle schema to **your** Postgres |
+| `pnpm db:migrate` | Run SQL migrations on **your** Postgres |
 | `pnpm db:seed` | Seed ~20 sample DE→FA words |
 | `pnpm db:build-words` | Rebuild `data/words-4000.json` |
 | `pnpm db:seed:full` | Seed the 4000-word catalog |
@@ -98,10 +121,12 @@ Open [http://localhost:3000](http://localhost:3000).
 
 `pnpm db:seed:full` replaces the `words` table. User cards cascade-delete with their words.
 
-## Keycloak
+## Connecting to your Keycloak
 
-Realm: `germanword`  
-Client: `german-word-web` (confidential)
+The app expects a realm and confidential client you create on **your** Keycloak server. Suggested names:
+
+- Realm: `germanword`
+- Client: `german-word-web` (confidential)
 
 Enable:
 
@@ -120,7 +145,7 @@ Required env (see [`.env.example`](.env.example)):
 KEYCLOAK_ISSUER=https://auth.example.com/realms/germanword
 KEYCLOAK_CLIENT_ID=german-word-web
 KEYCLOAK_CLIENT_SECRET=
-DATABASE_URL=postgresql://germanword:germanword@localhost:5432/germanword
+DATABASE_URL=postgresql://user:password@db.example.com:5432/germanword
 AUTH_URL=http://localhost:3000
 AUTH_TRUST_HOST=true
 AUTH_SECRET=
@@ -168,7 +193,7 @@ Review payload:
 
 `data/words-4000.json` is 4000 German lemmas ranked from subtitle/corpus frequency, with Persian glosses, POS, and noun gender/plural when available.
 
-Rebuild and reseed:
+Rebuild and reseed **your** database:
 
 ```bash
 pnpm db:build-words
@@ -177,15 +202,15 @@ pnpm db:seed:full
 
 Sources and licenses: [data/ATTRIBUTION.md](data/ATTRIBUTION.md). The compiled catalog is **CC BY-SA 4.0**.
 
-## Deploy
+## Deploy the app
 
-The included [`Dockerfile`](Dockerfile) builds Next.js in standalone mode.
+The [`Dockerfile`](Dockerfile) is an **app image only**: it compiles this Next.js project and runs `node server.js`. It does not bundle Keycloak or PostgreSQL.
 
-Typical Coolify (or any container) flow:
+Typical Coolify (or any container host) flow:
 
-1. Create the app from this repo and set production env, including `AUTH_URL`.
-2. Attach Postgres and set `DATABASE_URL`.
-3. After the first deploy, run schema + seed once:
+1. Build this repo's Dockerfile.
+2. Set production env so the container can reach **your existing** Keycloak and Postgres (`AUTH_URL`, `DATABASE_URL`, `KEYCLOAK_*`, `AUTH_SECRET`).
+3. After the first deploy, run schema + seed once against that database (one-off job or local machine with the same `DATABASE_URL`):
 
 ```bash
 pnpm db:push

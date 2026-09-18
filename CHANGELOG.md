@@ -14,4 +14,4 @@ and this project uses [Semantic Versioning](https://semver.org/).
 - Custom Keycloak sign-in and sign-up (no hosted login redirect)
 - 4000 high-frequency German lemmas with Persian glosses
 - Progress, profile, and daily new-word settings
-- Docker image and Coolify-oriented deploy notes
+- App-only Docker image (connects to your existing Keycloak and Postgres)

@@ -27,8 +27,9 @@ you updated on triage and any fix or advisory.
 
 ## Operational notes
 
-- Never commit `.env`, Keycloak secrets, database URLs with passwords, or
-  Auth.js secrets.
+- This repo is the application only. Keycloak and PostgreSQL stay on your
+  servers. Never commit `.env`, Keycloak secrets, database URLs with
+  passwords, or Auth.js secrets.
 - `AUTH_SECRET` must be a long random value (`openssl rand -base64 32`).
 - Keycloak clients used by this app are confidential and use direct access
   grants plus a service account. Treat `KEYCLOAK_CLIENT_SECRET` as production

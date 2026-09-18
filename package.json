@@ -2,7 +2,7 @@
   "name": "german-word-trainer",
   "version": "0.1.0",
   "private": true,
-  "description": "Spaced-repetition trainer for about 4000 high-frequency German words with Persian glosses.",
+  "description": "Next.js spaced-repetition trainer for about 4000 high-frequency German words with Persian glosses. App only: connect your own Keycloak and PostgreSQL.",
   "license": "MIT",
   "author": "Nima Khabbazi",
   "repository": {

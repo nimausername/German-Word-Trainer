@@ -1,4 +1,7 @@
 # syntax=docker/dockerfile:1
+# App-only image: builds and runs the Next.js trainer.
+# Does not include Keycloak or PostgreSQL. Pass DATABASE_URL and
+# KEYCLOAK_* at runtime so the container can reach your own servers.
 
 FROM node:22-alpine AS deps
 WORKDIR /app

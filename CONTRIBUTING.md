@@ -4,13 +4,17 @@ Thanks for helping. This document explains how to set up a development environme
 
 Please read the [Code of Conduct](CODE_OF_CONDUCT.md) first.
 
+This repository is **the Next.js application only**. Keycloak and PostgreSQL are not part of the project. Use servers you already run, and point the app at them with `.env`.
+
 ## What you need
 
 - Node.js 22 or newer
 - [pnpm](https://pnpm.io/) 10 or newer (this repo pins `packageManager`)
 - Python 3 (only if you rebuild `data/words-4000.json`)
-- PostgreSQL 16 (Docker Compose is provided)
-- A Keycloak realm with a confidential client (see the README Keycloak checklist)
+- Credentials and network access to **your** PostgreSQL
+- Credentials and network access to **your** Keycloak realm (see the README checklist)
+
+Lint, typecheck, and unit tests do **not** need Keycloak or Postgres.
 
 ## First-time setup
 
@@ -20,19 +24,20 @@ cd German-Word-Trainer
 cp .env.example .env
 ```
 
-Fill Keycloak values and `AUTH_SECRET` in `.env`. Then:
+Fill `.env` with `AUTH_SECRET`, your Keycloak issuer/client secret, and your `DATABASE_URL`. Then:
 
 ```bash
-docker compose up -d postgres
 pnpm install
 pnpm db:push
 pnpm db:seed:full
 pnpm dev
 ```
 
-The app listens on [http://localhost:3000](http://localhost:3000).
+The app listens on [http://localhost:3000](http://localhost:3000) and talks to the external services you configured.
 
 Use `pnpm db:seed` instead of `pnpm db:seed:full` if you only want the small sample catalog.
+
+The [`Dockerfile`](Dockerfile) is optional: it packages **this app** for deployment. It does not start Keycloak or a database.
 
 ## Checks to run locally
 
@@ -44,7 +49,7 @@ pnpm typecheck
 pnpm test
 ```
 
-`pnpm test` covers SM-2 scheduling, study-card presentation, and catalog integrity. It does not need Keycloak or Postgres.
+`pnpm test` covers SM-2 scheduling, study-card presentation, and catalog integrity.
 
 ## Project layout
 
@@ -54,11 +59,12 @@ pnpm test
 | `src/app/api/v1/` | Resource-oriented JSON API |
 | `src/components/` | UI (study cards, chrome, shadcn / ReUI) |
 | `src/services/` | Study domain logic (queue, reviews, progress) |
-| `src/lib/` | Env, SM-2, Keycloak, session, API helpers |
-| `src/db/` | Drizzle schema and client |
+| `src/lib/` | Env, SM-2, Keycloak client, session, API helpers |
+| `src/db/` | Drizzle schema and client (connects to your Postgres) |
 | `data/` | Word catalog and attribution |
 | `scripts/` | Seed, catalog rebuild, and Keycloak operator tools |
-| `drizzle/` | SQL migrations |
+| `drizzle/` | SQL migrations to apply on your database |
+| `Dockerfile` | Container image for this app only |
 
 Keep route files thin. Put reusable rules in `src/services` or `src/lib`, not in `src/app/api`.
 
@@ -89,6 +95,7 @@ Do not add copyrighted dictionary text that is not compatible with CC BY-SA 4.0.
 - Errors keep the `{ error: { code, message, details }, meta }` shape.
 - Do not trust client-supplied user IDs. Study routes must use the session `sub`.
 - Do not commit `.env`, secrets, or `data/.cache/`.
+- Do not add Keycloak or Postgres servers to this repo. This project is the app.
 
 ## Security issues
 
