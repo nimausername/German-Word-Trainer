@@ -1,0 +1,14 @@
+German Word Trainer
+Copyright (c) 2026 Nima Khabbazi
+
+This project uses two licenses:
+
+- Application source code is licensed under the MIT License. See LICENSE.
+- The compiled word catalog in data/words-4000.json (and rebuilds of it)
+  is licensed under Creative Commons Attribution-ShareAlike 4.0
+  International (CC BY-SA 4.0), because it is derived from CC BY-SA
+  dictionary and frequency sources. See data/ATTRIBUTION.md.
+
+You may use, modify, and redistribute the application code under MIT.
+If you redistribute the word catalog or a derivative of it, you must
+comply with CC BY-SA 4.0, including attribution and share-alike.
